@@ -67,11 +67,11 @@ class BlockedCSR2D:
 
     @property
     def n_block_rows(self):
-        return len(self.row_blocks_ptrs)
+        return len(self.row_blocks_ptrs) - 1
 
     def __str__(self) -> str:
         obj_repr = ""
-        for i in range(len(self.row_blocks_ptrs) - 1):
+        for i in range(self.n_block_rows):
             row_start = self.row_blocks_ptrs[i]
             row_end   = self.row_blocks_ptrs[i + 1]
 
@@ -83,19 +83,23 @@ class BlockedCSR2D:
 
 
 def bcsr_matvec(bcsr: BlockedCSR2D, x: list):
-    b = [0] * bcsr.block_size * bcsr.n_block_rows
+    block_size = bcsr.block_size
+    b = [0] * bcsr.n_block_rows * block_size
 
-    for i in range(len(bcsr.row_blocks_ptrs)):
-        row_start = bcsr.row_blocks_ptrs[i]
-        row_end   = bcsr.row_blocks_ptrs[i + 1]
+    for line in range(bcsr.n_block_rows):
+        row_start = bcsr.row_blocks_ptrs[line]
+        row_end   = bcsr.row_blocks_ptrs[line + 1]
 
-        for block in range(row_start, row_end):
+        for block in range(row_start,row_end):
             block_col = bcsr.col_blocks_indices[block]
             block_values = bcsr.get_block_values(block)
-            # x_col = x[block_col * ]
+            x_slice = x[block_col * block_size : (block_col + 1) * block_size]
 
-            for block_value in block_values:
-                pass
+            for i in range(block_size):
+                block_values_slice = block_values[i * block_size : (i + 1) * block_size]
+                b[line * block_size + i] += np.dot(block_values_slice, x_slice)
+
+    return b
 
 
 A = np.array([
@@ -127,6 +131,11 @@ x dimentsion n x 1
 b dimension m x 1
 '''
 x = [1] * block_size * block_size
+# print(x)
 b = bcsr_matvec(bcsr, x)
 
-print(b)
+print(f"Matvec: {b}\n")
+
+b = np.dot(A, x)
+
+print(f"Esperado: {b}")
