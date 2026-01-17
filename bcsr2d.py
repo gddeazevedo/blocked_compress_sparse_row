@@ -28,6 +28,7 @@ class BlockedCSR2D:
         self.col_blocks_indices = []
         self.block_values = []
         self.block_size = block_size
+        self.n_nz_blocks = 0
 
     def compress_matrix(self, A: NDArray) -> None:
         nx = A.shape[0]
@@ -46,6 +47,8 @@ class BlockedCSR2D:
 
             self.row_blocks_ptrs.append(n_nonzero_blocks)
 
+        self.n_nz_blocks = n_nonzero_blocks
+
     def build_block(self, A: NDArray, row: int, col: int) -> list:
         block = []
         for i in range(self.block_size):
@@ -58,7 +61,7 @@ class BlockedCSR2D:
         return []
 
     def get_block_values(self, i: int):
-        if i > len(self.block_values) or i < 0:
+        if i >= self.n_nz_blocks or i < 0:
             print("Out of bounds")
             return []
         block_start = i * self.block_size**2
@@ -84,7 +87,7 @@ class BlockedCSR2D:
 
 def bcsr_matvec(bcsr: BlockedCSR2D, x: list):
     block_size = bcsr.block_size
-    b = [0] * bcsr.n_block_rows * block_size
+    b = [0] * (bcsr.n_block_rows * block_size)
 
     for line in range(bcsr.n_block_rows):
         row_start = bcsr.row_blocks_ptrs[line]
@@ -139,3 +142,7 @@ print(f"Matvec: {b}\n")
 b = np.dot(A, x)
 
 print(f"Esperado: {b}")
+
+
+print(bcsr.n_block_rows)
+
